@@ -2,6 +2,10 @@
 using System.Collections.Generic;
 using System.Numerics;
 using System.Text;
+using Flurl.Http;
+using Flurl;
+using HangmanVs.Models;
+using System.Linq.Expressions;
 
 namespace HangmanVs
 {
@@ -87,15 +91,21 @@ namespace HangmanVs
             return result;
         }
 
-        public string getWord()
+        public async Task<string> getWordAsync(int diff)
         {
-            string foundWord;
-
-            Random rand = new Random();
-
-            foundWord = wordPool[rand.Next(wordPool.Count)];
-
-            return foundWord.ToLower();
+            var apiUrl = "https://random-word-api.herokuapp.com/word?diff=" + diff;
+            try
+            {
+                var response = await apiUrl.GetStringAsync();
+                return response;
+            }
+            catch (FlurlHttpException ex)
+            {
+                Console.WriteLine($"HTTP Status: {ex.StatusCode}");
+                string errorBody = await ex.GetResponseStringAsync();
+                Console.WriteLine($"Error response: {errorBody}");
+                throw;
+            }
         }
 
         public bool checkPlrAnswer(string guess, string allguesses)
@@ -171,6 +181,7 @@ namespace HangmanVs
                 Console.Clear();
                 Console.WriteLine("============[Hangman VS]================");
                 Console.WriteLine("Your word: " + UpdateWord(this.plr.getGuessed(),1));
+                //Console.WriteLine(this.playerWord);
                 Console.WriteLine();
                 Console.WriteLine("Computer's word: " + UpdateWord(this.ai.getGuessed(), 2));
                 Console.WriteLine();
@@ -196,10 +207,16 @@ namespace HangmanVs
             this.ai = player;
         }
 
-        public HangmanManager()
+        public HangmanManager(int diff)
         {
-            playerWord = getWord();
-            aiWord = getWord();
+            var plrWordData = getWordAsync(diff).Result;
+            var aiWordData = getWordAsync(diff).Result;
+
+            plrWordData = plrWordData.Substring(2,plrWordData.Length-4);
+            aiWordData = aiWordData.Substring(2, aiWordData.Length - 4);
+
+            playerWord = plrWordData.ToLower();
+            aiWord = aiWordData.ToLower();
         }
     }
 }
